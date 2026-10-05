@@ -11,7 +11,7 @@ path_to_data = root / "data" / "Micro_Ultrasound_Prostate_Segmentation_Dataset"
 sys.path.insert(0, str(root / "src" ))
 
 from micro_sn.load_train import case_id, load_case, frame_to_tensor
-from micro_sn.loss import downsample_mask, ag_bce
+from micro_sn.loss import downsample_mask, ag_bce, multiscale_ag_bce
 
 def niftis(folder):
     return sorted(Path(folder).glob("*.nii.gz"))
@@ -85,3 +85,20 @@ term = -torch.log(pred[0, 0] + 1e-6) # raw bce at p=0.5
 expected = (3 * 1 + 1 * 4) * term / 4 # three easy pixels with weight 1, one hard pixel with weight 4, divided by total weight
 print(f"Loss: {float(loss):.4f}, Expected: {float(expected):.4f}, Ratio: {float(loss / expected):.4f}")
 assert torch.allclose(loss, expected), "ag_bce loss does not match expected value"
+
+# computing the multiscale_ag_bce loss using the multiscale_ag_bce function
+print("\n\nComputing the multiscale_ag_bce loss:")
+pairs = [(gt_tensor, st_tensor), (gt_112, st_112), (gt_56, st_56), (gt_28, st_28)]
+preds = [torch.full_like(gt, 0.5, dtype=torch.float32) for gt, _ in pairs]
+loss = multiscale_ag_bce(preds, [gt for gt, _ in pairs], [st for _, st in pairs])
+
+term = -torch.log(torch.tensor(0.5 + 1e-6)) # raw bce at p=0.5
+expected = torch.zeros(())
+for gt, st in pairs:
+    hard_fraction = (gt != st).float().mean()
+    scale_loss = term * (1 + 3 * hard_fraction)
+    expected = expected + scale_loss
+    print(tuple(gt.shape), "hard fraction", round(float(hard_fraction), 4), "scale loss", round(float(scale_loss), 4))
+
+print("sum of scale losses:", round(float(expected), 4))
+assert torch.allclose(loss, expected), "multiscale_ag_bce loss does not match expected value"

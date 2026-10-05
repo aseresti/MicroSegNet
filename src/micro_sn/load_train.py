@@ -1,6 +1,8 @@
 from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
+import cv2
+import torch
 
 def case_id(path):
     stem = Path(path).name
@@ -27,5 +29,15 @@ def load_case(image_path, expert_path, non_expert_path):
     expert = (expert > 0).astype(np.uint8)  # Convert to binary
     non_expert = (non_expert > 0).astype(np.uint8)
     return image, expert, non_expert
+
+def frame_to_tensor(image, expert, nonexpert, z, size=224):
+    img = cv2.resize(image[z], (size, size), interpolation=cv2.INTER_LINEAR)
+    gt = cv2.resize(expert[z], (size, size), interpolation=cv2.INTER_NEAREST)
+    st = cv2.resize(nonexpert[z], (size, size), interpolation=cv2.INTER_NEAREST)
+    img_tensor = torch.from_numpy(img).unsqueeze(0).float()  # Add channel dimension
+    gt_tensor = torch.from_numpy(gt).unsqueeze(0).long()
+    st_tensor = torch.from_numpy(st).unsqueeze(0).long()
+    return img_tensor, gt_tensor, st_tensor
+
 
 

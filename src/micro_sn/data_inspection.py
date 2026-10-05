@@ -48,3 +48,5 @@ print("mid slice:", z, "hard pixels:", np.sum(hard), "of", hard.size)
 image, expert, student = load_case(img_paths[0], gt_paths[0], st_paths[0])
 print(f"Loaded case: {case_id(img_paths[0])}, image shape: {image.shape}, expert shape: {expert.shape}, student shape: {student.shape}")
 print(img_paths[0].name, gt_paths[0].name, st_paths[0].name)
+
+

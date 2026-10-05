@@ -9,7 +9,7 @@ path_to_data = root / "data" / "Micro_Ultrasound_Prostate_Segmentation_Dataset"
 
 sys.path.insert(0, str(root / "src" ))
 
-from micro_sn.load_train import case_id, load_case
+from micro_sn.load_train import case_id, load_case, frame_to_tensor
 
 def niftis(folder):
     return sorted(Path(folder).glob("*.nii.gz"))
@@ -35,6 +35,7 @@ expert = sitk.GetArrayFromImage(gt)
 student = sitk.GetArrayFromImage(st)
 
 # printing the shape, dtype, min and max values of the image and masks
+print("\n\nLoading the first case:")
 print(f"Image: {image.shape}, {image.dtype}, min: {np.min(image)}, max: {np.max(image)}")
 print(f"Expert: {expert.shape}, {expert.dtype}, min: {np.min(expert)}, max: {np.max(expert)}")
 print(f"Student: {student.shape}, {student.dtype}, min: {np.min(student)}, max: {np.max(student)}")
@@ -45,8 +46,19 @@ hard = (expert[z] > 0) != (student[z] > 0)
 print("mid slice:", z, "hard pixels:", np.sum(hard), "of", hard.size)
 
 # loading a case using the load_case function
+print("\n\nLoading a case:")
 image, expert, student = load_case(img_paths[0], gt_paths[0], st_paths[0])
 print(f"Loaded case: {case_id(img_paths[0])}, image shape: {image.shape}, expert shape: {expert.shape}, student shape: {student.shape}")
 print(img_paths[0].name, gt_paths[0].name, st_paths[0].name)
 
+# converting a frame to tensor using the frame_to_tensor function
+print("\n\nConverting a frame to tensor:")
+img_tensor, gt_tensor, st_tensor = frame_to_tensor(image, expert, student, z)
+print(img_tensor.shape,img_tensor.dtype, img_tensor.min(), img_tensor.max())
+print(gt_tensor.shape,gt_tensor.dtype, gt_tensor.min(), gt_tensor.max())
+print(st_tensor.shape,st_tensor.dtype, st_tensor.min(), st_tensor.max())
 
+native_fraction = float(expert[z].sum()) / expert[z].size
+tensor_fraction = float(gt_tensor.sum()) / gt_tensor.numel()
+print(f"Native fraction of positive pixels: {native_fraction:.4f}, Tensor fraction of positive pixels at 224: {tensor_fraction:.4f}")
+print("hard pixels", int((gt_tensor != st_tensor).sum()))

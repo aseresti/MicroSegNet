@@ -2,4 +2,8 @@
 *.pyc
 *.md
 data/Micro_Ultrasound_Prostate_Segmentation_Dataset/
-data/train_png/
+data/train_png/model/*.safetensors
+model/*.h5
+model/*.bin
+model/*.msgpack
+model/**/*.npz

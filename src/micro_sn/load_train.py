@@ -39,5 +39,3 @@ def frame_to_tensor(image, expert, nonexpert, z, size=224):
     st_tensor = torch.from_numpy(st).unsqueeze(0).long()
     return img_tensor, gt_tensor, st_tensor
 
-
-

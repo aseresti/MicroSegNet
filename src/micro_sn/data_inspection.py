@@ -10,6 +10,7 @@ path_to_data = root / "data" / "Micro_Ultrasound_Prostate_Segmentation_Dataset"
 sys.path.insert(0, str(root / "src" ))
 
 from micro_sn.load_train import case_id, load_case, frame_to_tensor
+from micro_sn.process_mask import downsample_mask
 
 def niftis(folder):
     return sorted(Path(folder).glob("*.nii.gz"))
@@ -62,3 +63,13 @@ native_fraction = float(expert[z].sum()) / expert[z].size
 tensor_fraction = float(gt_tensor.sum()) / gt_tensor.numel()
 print(f"Native fraction of positive pixels: {native_fraction:.4f}, Tensor fraction of positive pixels at 224: {tensor_fraction:.4f}")
 print("hard pixels", int((gt_tensor != st_tensor).sum()))
+
+print("\n\nDownsampling the mask:")
+gt_112, st_112 = downsample_mask(gt_tensor, 112), downsample_mask(st_tensor, 112)
+gt_56, st_56 = downsample_mask(gt_tensor, 56), downsample_mask(st_tensor, 56)
+gt_28, st_28 = downsample_mask(gt_tensor, 28), downsample_mask(st_tensor, 28)
+for name, gt, st in [("224", gt_tensor, st_tensor), ("112", gt_112, st_112), ("56", gt_56, st_56), ("28", gt_28, st_28)]:
+    native_fraction = float(expert[z].sum()) / expert[z].size
+    tensor_fraction = float(gt.sum()) / gt.numel()
+    hard_pixels = int((gt != st).sum())
+    print(f"Size: {name}, GT shape: {gt.shape}, ST shape: {st.shape}, Native fraction: {native_fraction:.4f}, Tensor fraction: {tensor_fraction:.4f}, Hard pixels: {hard_pixels}")

@@ -10,7 +10,7 @@ path_to_data = root / "data" / "Micro_Ultrasound_Prostate_Segmentation_Dataset"
 sys.path.insert(0, str(root / "src" ))
 
 from micro_sn.load_train import case_id, load_case, frame_to_tensor
-from micro_sn.process_mask import downsample_mask
+from src.micro_sn.loss import downsample_mask
 
 def niftis(folder):
     return sorted(Path(folder).glob("*.nii.gz"))

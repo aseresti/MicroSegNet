@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
+import torch
 
 root = Path(__file__).parents[2]
 path_to_data = root / "data" / "Micro_Ultrasound_Prostate_Segmentation_Dataset"
@@ -10,7 +11,7 @@ path_to_data = root / "data" / "Micro_Ultrasound_Prostate_Segmentation_Dataset"
 sys.path.insert(0, str(root / "src" ))
 
 from micro_sn.load_train import case_id, load_case, frame_to_tensor
-from src.micro_sn.loss import downsample_mask
+from micro_sn.loss import downsample_mask, ag_bce
 
 def niftis(folder):
     return sorted(Path(folder).glob("*.nii.gz"))
@@ -73,3 +74,14 @@ for name, gt, st in [("224", gt_tensor, st_tensor), ("112", gt_112, st_112), ("5
     tensor_fraction = float(gt.sum()) / gt.numel()
     hard_pixels = int((gt != st).sum())
     print(f"Size: {name}, GT shape: {gt.shape}, ST shape: {st.shape}, Native fraction: {native_fraction:.4f}, Tensor fraction: {tensor_fraction:.4f}, Hard pixels: {hard_pixels}")
+
+# computing the ag_bce loss using the ag_bce function
+print("\n\nComputing the ag_bce loss:")
+expert_ = torch.tensor([[1, 1], [0, 0]])
+student_ = torch.tensor([[1, 0], [0, 0]])
+pred = torch.full((2, 2), 0.5)
+loss = ag_bce(pred, expert_, student_)
+term = -torch.log(pred[0, 0] + 1e-6) # raw bce at p=0.5
+expected = (3 * 1 + 1 * 4) * term / 4 # three easy pixels with weight 1, one hard pixel with weight 4, divided by total weight
+print(f"Loss: {float(loss):.4f}, Expected: {float(expected):.4f}, Ratio: {float(loss / expected):.4f}")
+assert torch.allclose(loss, expected), "ag_bce loss does not match expected value"

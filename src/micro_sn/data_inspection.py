@@ -12,6 +12,7 @@ sys.path.insert(0, str(root / "src" ))
 
 from micro_sn.load_train import case_id, load_case, frame_to_tensor
 from micro_sn.loss import downsample_mask, ag_bce, multiscale_ag_bce
+from micro_sn.model import FourScaleStub
 
 def niftis(folder):
     return sorted(Path(folder).glob("*.nii.gz"))
@@ -102,3 +103,21 @@ for gt, st in pairs:
 
 print("sum of scale losses:", round(float(expected), 4))
 assert torch.allclose(loss, expected), "multiscale_ag_bce loss does not match expected value"
+
+# testing the FourScaleStub model
+print("\n\nTesting the FourScaleStub model:")
+model = FourScaleStub()
+x = img_tensor.unsqueeze(0)  # Add batch dimension
+logits = model(x)
+probs = [torch.sigmoid(t.squeeze(1)) for t in logits]  # Remove channel dimension and apply sigmoid
+gt_tensor, st_tensor = gt_tensor.squeeze(0), st_tensor.squeeze(0)  # Add batch dimension
+experts = [m.unsqueeze(0) for m in [gt_tensor, gt_112, gt_56, gt_28]]  # Remove batch dimension
+students = [m.unsqueeze(0) for m in [st_tensor, st_112, st_56, st_28]]  # Remove batch dimension
+
+loss = multiscale_ag_bce(probs, experts, students)
+loss.backward()
+
+for p in probs:
+    print(f"Probabilities shape: {p.shape}, min: {p.min().item():.4f}, max: {p.max().item():.4f}")
+print(f"Multiscale loss: {loss.item():.4f}")
+print("grad", model.conv.weight.grad.abs().mean().item())
